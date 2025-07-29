@@ -5,7 +5,7 @@ local cooldown = 0
 local markerUpdateInterval = 0.
 local freezeEnabled = true
 local freezeTime = 0.
-local colliderHighlight = true
+local colliderHighlight = false
 
 local FrontflipKey = Enum.KeyCode.Z
 local BackflipKey = Enum.KeyCode.X
@@ -247,3 +247,79 @@ game.StarterGui:SetCore("SendNotification", {
 	Duration = 5,
 	Button1 = "Okay"
 })
+
+--------------------------------------------------------------------
+-- 📦 ESP SYSTEM - Press P to toggle
+--------------------------------------------------------------------
+local ESPKey = Enum.KeyCode.P
+local espEnabled = false
+local espFolder = Instance.new("Folder", workspace)
+espFolder.Name = "KivFLIPP_ESP"
+
+-- Function to create ESP for a character
+local function createESP(character, playerName)
+    if not character:FindFirstChild("HumanoidRootPart") then return end
+
+    -- Billboard GUI for name
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "KivESP_Name"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+    billboard.Parent = espFolder
+
+    local nameLabel = Instance.new("TextLabel", billboard)
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = playerName
+    nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 16
+
+    -- Highlight outline
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "KivESP_Outline"
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlight.Parent = character
+
+    return {billboard = billboard, highlight = highlight}
+end
+
+-- Function to remove ESP
+local function clearESP()
+    for _, item in ipairs(espFolder:GetChildren()) do
+        item:Destroy()
+    end
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr.Character and plr.Character:FindFirstChild("KivESP_Outline") then
+            plr.Character:FindFirstChild("KivESP_Outline"):Destroy()
+        end
+    end
+end
+
+-- Toggle ESP
+game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == ESPKey then
+        espEnabled = not espEnabled
+        if espEnabled then
+            clearESP()
+            for _, plr in ipairs(game.Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    createESP(plr.Character, plr.Name)
+                end
+                plr.CharacterAdded:Connect(function(char)
+                    if espEnabled then
+                        task.wait(1)
+                        createESP(char, plr.Name)
+                    end
+                end)
+            end
+        else
+            clearESP()
+        end
+    end
+end)
