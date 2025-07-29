@@ -5,7 +5,7 @@ local cooldown = 0
 local markerUpdateInterval = 0.
 local freezeEnabled = true
 local freezeTime = 0.
-local colliderHighlight = false
+local colliderHighlight = true
 
 local FrontflipKey = Enum.KeyCode.Z
 local BackflipKey = Enum.KeyCode.X
@@ -57,14 +57,53 @@ if not screenGui then
     deleteButton.Font = Enum.Font.SourceSansBold
     deleteButton.Text = "DELETE SCRIPT ENTIRELY"
     deleteButton.TextSize = 16
+
+    -- UPDATED DELETE BUTTON FUNCTION:
     deleteButton.MouseButton1Click:Connect(function()
         scriptActive = false
-        if screenGui then screenGui:Destroy() end
-        if landingMarker then landingMarker:Destroy() end
+        
+        -- Step 1: Remove ESP things first
+        if espFolder then
+            for _, espItem in ipairs(espFolder:GetChildren()) do
+                espItem:Destroy()
+                task.wait(0.1)
+            end
+            espFolder:Destroy()
+        end
+
+        -- Step 2: Remove Highlight blocks
         for _, block in ipairs(highlightBlocks) do
-            if block and block.Parent then block:Destroy() end
+            if block and block.Parent then 
+                block:Destroy() 
+                task.wait(0.1)
+            end
         end
         highlightBlocks = {}
+
+        -- Step 3: Remove landing marker
+        if landingMarker then 
+            landingMarker:Destroy() 
+            task.wait(0.1)
+        end
+
+        -- Step 4: Remove UI elements except deleteButton
+        for _, uiItem in ipairs(screenGui:GetChildren()) do
+            if uiItem ~= deleteButton then
+                uiItem:Destroy()
+                task.wait(0.1)
+            end
+        end
+
+        -- Step 5: Remove delete button itself
+        deleteButton:Destroy()
+
+        -- Step 6: Remove the ScreenGui itself
+        if screenGui then
+            screenGui:Destroy()
+        end
+
+        -- Step 7: Finally destroy this script
+        task.wait(0.2)
         script:Destroy()
     end)
 end
