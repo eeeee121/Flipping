@@ -1,7 +1,3 @@
--- Settings
-local cooldown = 3             -- seconds for flip cooldown
-local markerUpdateInterval = 0.1  -- seconds between landing marker updates
-
 --[[ Info ]]--
 local ver = "3.9"
 local scriptname = "feFlip"
@@ -15,6 +11,10 @@ local ca = game:GetService("ContextActionService")
 local player = game:GetService("Players").LocalPlayer
 local h = 0.0174533
 
+-- Settings
+local cooldown = 3
+local markerUpdateInterval = 0.1
+local freezeDuration = 0.7  -- Freeze duration after flip in seconds
 local canFlip = true
 
 -- UI setup
@@ -78,7 +78,7 @@ local function freezeCharacterAfterFlip(humanoid)
 	local oldJump = humanoid.JumpPower
 	humanoid.WalkSpeed = 0
 	humanoid.JumpPower = 0
-	wait(0.7)
+	wait(freezeDuration)
 	humanoid.WalkSpeed = oldWalk
 	humanoid.JumpPower = oldJump
 end
