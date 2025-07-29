@@ -1,6 +1,12 @@
 --[[ Info ]]--
-local ver = "3.9"
+local ver = "4.0"
 local scriptname = "feFlip"
+
+--[[ SETTINGS ]]--
+local cooldown = 0                -- seconds between flips
+local markerUpdateInterval = 0   -- how fast the marker updates
+local freezeEnabled = false         -- freeze after flip?
+local freezeTime = 0             -- seconds of freeze
 
 --[[ Keybinds ]]--
 local FrontflipKey = Enum.KeyCode.Z
@@ -10,11 +16,9 @@ local BackflipKey = Enum.KeyCode.X
 local ca = game:GetService("ContextActionService")
 local player = game:GetService("Players").LocalPlayer
 local h = 0.0174533
+local scriptActive = true
 
--- Settings
-local cooldown = 3
-local markerUpdateInterval = 0.1
-local freezeDuration = 0.7  -- Freeze duration after flip in seconds
+-- Cooldown state
 local canFlip = true
 
 -- UI setup
@@ -28,6 +32,7 @@ if not screenGui then
     screenGui.ResetOnSpawn = false  
     screenGui.Parent = playerGui
 
+    -- cooldown frame
     local cooldownFrame = Instance.new("Frame", screenGui)
     cooldownFrame.Name = "CooldownFrame"
     cooldownFrame.Size = UDim2.new(0, 200, 0, 20)
@@ -48,6 +53,23 @@ if not screenGui then
     cooldownText.Font = Enum.Font.SourceSansBold
     cooldownText.Text = "Ready"
     cooldownText.TextSize = 18
+
+    -- 🛑 Delete Script Button
+    local deleteButton = Instance.new("TextButton", screenGui)
+    deleteButton.Name = "DeleteButton"
+    deleteButton.Size = UDim2.new(0, 200, 0, 30)
+    deleteButton.Position = UDim2.new(1, -210, 1, -75)
+    deleteButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    deleteButton.TextColor3 = Color3.new(1, 1, 1)
+    deleteButton.Font = Enum.Font.SourceSansBold
+    deleteButton.Text = "DELETE SCRIPT ENTIRELY"
+    deleteButton.TextSize = 16
+    deleteButton.MouseButton1Click:Connect(function()
+        scriptActive = false
+        if screenGui then screenGui:Destroy() end
+        if landingMarker then landingMarker:Destroy() end
+        script:Destroy()
+    end)
 end
 
 -- Reference UI
@@ -72,46 +94,62 @@ local function startCooldown()
 	canFlip = true
 end
 
--- Freeze AFTER flip
+-- Freeze AFTER flip (if enabled)
 local function freezeCharacterAfterFlip(humanoid)
+    if not freezeEnabled then return end
 	local oldWalk = humanoid.WalkSpeed
 	local oldJump = humanoid.JumpPower
 	humanoid.WalkSpeed = 0
 	humanoid.JumpPower = 0
-	wait(freezeDuration)
+	wait(freezeTime)
 	humanoid.WalkSpeed = oldWalk
 	humanoid.JumpPower = oldJump
 end
 
--- 🔴 Landing marker parts
+-- 🔴 Landing marker part
 local landingMarker = Instance.new("Part")
 landingMarker.Shape = Enum.PartType.Ball
 landingMarker.Size = Vector3.new(2, 2, 2)
 landingMarker.Transparency = 0.5
-landingMarker.Color = Color3.fromRGB(255, 0, 0)
+landingMarker.Color = Color3.fromRGB(255, 0, 0) -- start as red
 landingMarker.Anchored = true
 landingMarker.CanCollide = false
 landingMarker.Material = Enum.Material.Neon
 landingMarker.Parent = workspace
 
 local markerLocked = false -- true only during flip
+local invert = false       -- toggles marker color
 
 -- 🔄 Update landing marker when NOT flipping
 task.spawn(function()
-	while task.wait(markerUpdateInterval) do
+	while scriptActive do
+		task.wait(markerUpdateInterval)
+		if not scriptActive then break end
 		if not markerLocked then
 			local char = player.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			if hrp then
 				-- further prediction (35 studs ahead)
 				local predictedPos = hrp.Position + hrp.CFrame.LookVector * 35
+				
+				-- Raycast ignoring the marker itself and player
+				local ignoreList = {landingMarker, char}
 				local ray = Ray.new(predictedPos, Vector3.new(0, -200, 0))
-				local hit, pos = workspace:FindPartOnRay(ray, char)
+				local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
+				
 				if hit then
 					landingMarker.CFrame = CFrame.new(Vector3.new(predictedPos.X, pos.Y + 1, predictedPos.Z))
 				else
 					landingMarker.CFrame = CFrame.new(predictedPos)
 				end
+			end
+
+			-- 🎨 Invert the marker's color each update
+			invert = not invert
+			if invert then
+				landingMarker.Color = Color3.fromRGB(0, 255, 255) -- Cyan
+			else
+				landingMarker.Color = Color3.fromRGB(255, 0, 0)   -- Red
 			end
 		end
 	end
@@ -126,13 +164,11 @@ local function performFlip(direction)
 	if hum and hrp then
 		-- 🔒 Lock marker in place when flip starts
 		markerLocked = true  
-		local lockedPosition = landingMarker.Position
 
-		-- 🏁 Remove marker after landing & unlock updates
+		-- 🏁 Unlock marker after landing
 		local landedConn
 		landedConn = hum:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
 			if hum.FloorMaterial ~= Enum.Material.Air then
-				-- unlock marker updates after landing
 				markerLocked = false
 				landedConn:Disconnect()
 			end
