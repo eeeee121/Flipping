@@ -1,34 +1,25 @@
---[[ Info ]]--
-local ver = "4.2"
-local scriptname = "feFlip"
+local ver = "4.3"
+local scriptname = "KivFLIPP"
 
---[[ SETTINGS ]]--
-local cooldown = 0                 -- seconds between flips
-local markerUpdateInterval = 0   -- how fast the marker updates
-local freezeEnabled = true         -- freeze after flip?
-local freezeTime = 0             -- seconds of freeze
-local colliderHighlight = true     -- highlight invisible colliders?
+local cooldown = 0
+local markerUpdateInterval = 0.
+local freezeEnabled = true
+local freezeTime = 0.
+local colliderHighlight = true
 
---[[ Keybinds ]]--
 local FrontflipKey = Enum.KeyCode.Z
 local BackflipKey = Enum.KeyCode.X
 
---[[ Dependencies ]]--
 local ca = game:GetService("ContextActionService")
 local player = game:GetService("Players").LocalPlayer
 local h = 0.0174533
 local scriptActive = true
 
--- Cooldown state
 local canFlip = true
-
--- Keep track of spawned highlight blocks
 local highlightBlocks = {}
 
--- UI setup
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Create UI if missing
 local screenGui = playerGui:FindFirstChild("FlipCooldownUI")
 if not screenGui then
     screenGui = Instance.new("ScreenGui")
@@ -36,7 +27,6 @@ if not screenGui then
     screenGui.ResetOnSpawn = false  
     screenGui.Parent = playerGui
 
-    -- cooldown frame
     local cooldownFrame = Instance.new("Frame", screenGui)
     cooldownFrame.Name = "CooldownFrame"
     cooldownFrame.Size = UDim2.new(0, 200, 0, 20)
@@ -58,7 +48,6 @@ if not screenGui then
     cooldownText.Text = "Ready"
     cooldownText.TextSize = 18
 
-    -- 🛑 Delete Script Button
     local deleteButton = Instance.new("TextButton", screenGui)
     deleteButton.Name = "DeleteButton"
     deleteButton.Size = UDim2.new(0, 200, 0, 30)
@@ -72,7 +61,6 @@ if not screenGui then
         scriptActive = false
         if screenGui then screenGui:Destroy() end
         if landingMarker then landingMarker:Destroy() end
-        -- 🧹 remove all red highlight blocks
         for _, block in ipairs(highlightBlocks) do
             if block and block.Parent then block:Destroy() end
         end
@@ -81,29 +69,24 @@ if not screenGui then
     end)
 end
 
--- Reference UI
 local cooldownFrame = screenGui:WaitForChild("CooldownFrame")
 local cooldownBar = cooldownFrame:WaitForChild("CooldownBar")
 local cooldownText = cooldownFrame:WaitForChild("CooldownText")
 
--- Cooldown Function
 local function startCooldown()
 	canFlip = false
 	cooldownText.Text = "Cooldown"
 	cooldownText.TextColor3 = Color3.fromRGB(255, 50, 50)
-
 	for i = cooldown, 1, -1 do
 		cooldownBar.Size = UDim2.new(i/cooldown, 0, 1, 0)
 		wait(1)
 	end
-
 	cooldownBar.Size = UDim2.new(1, 0, 1, 0)
 	cooldownText.Text = "Ready"
 	cooldownText.TextColor3 = Color3.new(1,1,1)
 	canFlip = true
 end
 
--- Freeze AFTER flip (if enabled)
 local function freezeCharacterAfterFlip(humanoid)
     if not freezeEnabled then return end
 	local oldWalk = humanoid.WalkSpeed
@@ -115,21 +98,19 @@ local function freezeCharacterAfterFlip(humanoid)
 	humanoid.JumpPower = oldJump
 end
 
--- 🔴 Landing marker part
 local landingMarker = Instance.new("Part")
 landingMarker.Shape = Enum.PartType.Ball
 landingMarker.Size = Vector3.new(2, 2, 2)
 landingMarker.Transparency = 0.5
-landingMarker.Color = Color3.fromRGB(255, 0, 0) -- start as red
+landingMarker.Color = Color3.fromRGB(255, 0, 0)
 landingMarker.Anchored = true
 landingMarker.CanCollide = false
 landingMarker.Material = Enum.Material.Neon
 landingMarker.Parent = workspace
 
-local markerLocked = false -- true only during flip
-local invert = false       -- toggles marker color
+local markerLocked = false
+local invert = false
 
--- 🔄 Update landing marker when NOT flipping
 task.spawn(function()
 	while scriptActive do
 		task.wait(markerUpdateInterval)
@@ -138,40 +119,32 @@ task.spawn(function()
 			local char = player.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			if hrp then
-				-- further prediction (35 studs ahead)
 				local predictedPos = hrp.Position + hrp.CFrame.LookVector * 35
-				
-				-- Raycast ignoring the marker itself and player
 				local ignoreList = {landingMarker, char}
 				local ray = Ray.new(predictedPos, Vector3.new(0, -200, 0))
 				local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
-				
 				if hit then
 					landingMarker.CFrame = CFrame.new(Vector3.new(predictedPos.X, pos.Y + 1, predictedPos.Z))
 				else
 					landingMarker.CFrame = CFrame.new(predictedPos)
 				end
 			end
-
-			-- 🎨 Invert the marker's color each update
 			invert = not invert
 			if invert then
-				landingMarker.Color = Color3.fromRGB(0, 255, 255) -- Cyan
+				landingMarker.Color = Color3.fromRGB(0, 255, 255)
 			else
-				landingMarker.Color = Color3.fromRGB(255, 0, 0)   -- Red
+				landingMarker.Color = Color3.fromRGB(255, 0, 0)
 			end
 		end
 	end
 end)
 
--- 🔍 Highlight invisible colliders with **actual blocks**
 if colliderHighlight then
 	task.spawn(function()
 		while scriptActive do
 			task.wait(2)
 			for _, obj in pairs(workspace:GetDescendants()) do
 				if obj:IsA("BasePart") and obj.CanCollide and obj.Transparency > 0.5 then
-					-- only add if not already highlighted
 					if not obj:FindFirstChild("ColliderHighlightBlock") then
 						local block = Instance.new("Part")
 						block.Name = "ColliderHighlightBlock"
@@ -179,19 +152,17 @@ if colliderHighlight then
 						block.CanCollide = false
 						block.Transparency = 0.5
 						block.Color = Color3.fromRGB(255, 0, 0)
-						block.Size = obj.Size + Vector3.new(0.2, 0.2, 0.2) -- slightly bigger
+						block.Size = obj.Size + Vector3.new(0.2, 0.2, 0.2)
 						block.CFrame = obj.CFrame
 						block.Material = Enum.Material.ForceField
 						block.Parent = workspace
 
-						-- tag original part so we don’t duplicate
 						local tag = Instance.new("BoolValue")
 						tag.Name = "ColliderHighlightBlock"
 						tag.Parent = obj
 
 						table.insert(highlightBlocks, block)
 
-						-- keep it following the original part
 						task.spawn(function()
 							while scriptActive and obj.Parent and block.Parent do
 								task.wait(0.5)
@@ -206,17 +177,12 @@ if colliderHighlight then
 	end)
 end
 
--- Core Flip Function
 local function performFlip(direction)
 	local char = player.Character
 	local hrp = char:FindFirstChild("HumanoidRootPart")
 	local hum = char:FindFirstChildOfClass("Humanoid")
-
 	if hum and hrp then
-		-- 🔒 Lock marker in place when flip starts
 		markerLocked = true  
-
-		-- 🏁 Unlock marker after landing
 		local landedConn
 		landedConn = hum:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
 			if hum.FloorMaterial ~= Enum.Material.Air then
@@ -224,19 +190,14 @@ local function performFlip(direction)
 				landedConn:Disconnect()
 			end
 		end)
-
-		-- 🏃 Do flip movement
 		hum:ChangeState("Jumping")
 		hum.Sit = true
-
 		local bv = Instance.new("BodyVelocity")
 		bv.Velocity = hrp.CFrame.LookVector * direction * 50 + Vector3.new(0, 30, 0)
 		bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 		bv.P = 1250
 		bv.Parent = hrp
 		game:GetService("Debris"):AddItem(bv, 0.25)
-
-		-- 🔄 Spin animation
 		for i = 1, 360 do
 			delay(i/720, function()
 				hum.Sit = true
@@ -247,22 +208,20 @@ local function performFlip(direction)
 				end
 			end)
 		end
-
 		wait(0.55)
 		hum.Sit = false
 		freezeCharacterAfterFlip(hum)
 	end
 end
 
--- Key Binds
-function zeezyFrontflip(act, inp, obj)
+function zeezyFrontflip(_, inp)
 	if inp == Enum.UserInputState.Begin and canFlip then
 		performFlip(1)
 		startCooldown()
 	end
 end
 
-function zeezyBackflip(act, inp, obj)
+function zeezyBackflip(_, inp)
 	if inp == Enum.UserInputState.Begin and canFlip then
 		performFlip(-1)
 		startCooldown()
@@ -272,7 +231,6 @@ end
 ca:BindAction("zeezyFrontflip", zeezyFrontflip, false, FrontflipKey)
 ca:BindAction("zeezyBackflip", zeezyBackflip, false, BackflipKey)
 
--- Notification
 print(scriptname .. " " .. ver .. " loaded successfully")
 
 local notifSound = Instance.new("Sound", workspace)
@@ -283,8 +241,8 @@ notifSound.PlayOnRemove = true
 notifSound:Destroy()
 
 game.StarterGui:SetCore("SendNotification", {
-	Title = "feFlip",
-	Text = "feFlip loaded successfully!",
+	Title = "KivFLIPP",
+	Text = "KivFLIPP loaded successfully!",
 	Icon = "rbxassetid://505845268",
 	Duration = 5,
 	Button1 = "Okay"
