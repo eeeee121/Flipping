@@ -61,7 +61,21 @@ if not screenGui then
     -- UPDATED DELETE BUTTON FUNCTION:
     deleteButton.MouseButton1Click:Connect(function()
         scriptActive = false
-        
+        canFlip = false  -- stop any future flips immediately
+
+        -- Destroy any active BodyVelocity on the player to stop flips in progress
+        local char = player.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, bv in ipairs(hrp:GetChildren()) do
+                    if bv:IsA("BodyVelocity") then
+                        bv:Destroy()
+                    end
+                end
+            end
+        end
+
         -- Step 1: Remove ESP things first
         if espFolder then
             for _, espItem in ipairs(espFolder:GetChildren()) do
