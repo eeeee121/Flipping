@@ -1,12 +1,13 @@
 --[[ Info ]]--
-local ver = "4.0"
+local ver = "4.2"
 local scriptname = "feFlip"
 
 --[[ SETTINGS ]]--
-local cooldown = 0                -- seconds between flips
+local cooldown = 0                 -- seconds between flips
 local markerUpdateInterval = 0   -- how fast the marker updates
-local freezeEnabled = false         -- freeze after flip?
+local freezeEnabled = true         -- freeze after flip?
 local freezeTime = 0             -- seconds of freeze
+local colliderHighlight = true     -- highlight invisible colliders?
 
 --[[ Keybinds ]]--
 local FrontflipKey = Enum.KeyCode.Z
@@ -20,6 +21,9 @@ local scriptActive = true
 
 -- Cooldown state
 local canFlip = true
+
+-- Keep track of spawned highlight blocks
+local highlightBlocks = {}
 
 -- UI setup
 local playerGui = player:WaitForChild("PlayerGui")
@@ -68,6 +72,11 @@ if not screenGui then
         scriptActive = false
         if screenGui then screenGui:Destroy() end
         if landingMarker then landingMarker:Destroy() end
+        -- 🧹 remove all red highlight blocks
+        for _, block in ipairs(highlightBlocks) do
+            if block and block.Parent then block:Destroy() end
+        end
+        highlightBlocks = {}
         script:Destroy()
     end)
 end
@@ -154,6 +163,48 @@ task.spawn(function()
 		end
 	end
 end)
+
+-- 🔍 Highlight invisible colliders with **actual blocks**
+if colliderHighlight then
+	task.spawn(function()
+		while scriptActive do
+			task.wait(2)
+			for _, obj in pairs(workspace:GetDescendants()) do
+				if obj:IsA("BasePart") and obj.CanCollide and obj.Transparency > 0.5 then
+					-- only add if not already highlighted
+					if not obj:FindFirstChild("ColliderHighlightBlock") then
+						local block = Instance.new("Part")
+						block.Name = "ColliderHighlightBlock"
+						block.Anchored = true
+						block.CanCollide = false
+						block.Transparency = 0.5
+						block.Color = Color3.fromRGB(255, 0, 0)
+						block.Size = obj.Size + Vector3.new(0.2, 0.2, 0.2) -- slightly bigger
+						block.CFrame = obj.CFrame
+						block.Material = Enum.Material.ForceField
+						block.Parent = workspace
+
+						-- tag original part so we don’t duplicate
+						local tag = Instance.new("BoolValue")
+						tag.Name = "ColliderHighlightBlock"
+						tag.Parent = obj
+
+						table.insert(highlightBlocks, block)
+
+						-- keep it following the original part
+						task.spawn(function()
+							while scriptActive and obj.Parent and block.Parent do
+								task.wait(0.5)
+								block.CFrame = obj.CFrame
+							end
+							if block.Parent then block:Destroy() end
+						end)
+					end
+				end
+			end
+		end
+	end)
+end
 
 -- Core Flip Function
 local function performFlip(direction)
