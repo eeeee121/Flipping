@@ -1,3 +1,7 @@
+-- Settings
+local cooldown = 3             -- seconds for flip cooldown
+local markerUpdateInterval = 0.1  -- seconds between landing marker updates
+
 --[[ Info ]]--
 local ver = "3.9"
 local scriptname = "feFlip"
@@ -11,8 +15,6 @@ local ca = game:GetService("ContextActionService")
 local player = game:GetService("Players").LocalPlayer
 local h = 0.0174533
 
--- Cooldown settings
-local cooldown = 3
 local canFlip = true
 
 -- UI setup
@@ -96,7 +98,7 @@ local markerLocked = false -- true only during flip
 
 -- 🔄 Update landing marker when NOT flipping
 task.spawn(function()
-	while task.wait(0.1) do
+	while task.wait(markerUpdateInterval) do
 		if not markerLocked then
 			local char = player.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
