@@ -5,7 +5,7 @@ local mouse = player:GetMouse()
 
 -- 🔀 Mode switching setup
 local mode = "forward" -- starts in forward teleport mode
-local switchKey = Enum.KeyCode.BackSlash -- "\" key
+local switchKey = Enum.KeyCode.M -- "\" key
 local teleportDistance = 35
 
 -- 🔵 Marker setup
